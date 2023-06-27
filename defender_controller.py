@@ -318,12 +318,13 @@ class DefenderController(app_manager.RyuApp):
                 res = True
             # do attack detection
             if not self._is_seg_free(seg_p, 'vt'):
-                print('Time: {0}, dpid: {1} Event: VPS is overflow'\
-                    .format(time.time(), dpid))
+                # print('Time: {0}, dpid: {1} Event: VPS is overflow'\
+                #     .format(time.time(), dpid))
+                pass 
             elif self._is_seg_mal(seg_p):
-                    # print('Time: {0}, dpid: {1} Event: new entries flood'\
-                    #    .format(time.time(), dpid))
-                    pass
+                # print('Time: {0}, dpid: {1} Event: new entries flood'\
+                #    .format(time.time(), dpid))
+                pass
             return res
 
     def _clean_segment(self, dpid):
