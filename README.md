@@ -1,5 +1,5 @@
 # POA
-Research on persistent overflow attack 
+Research on persistent overflow attack. The "persistent" means the attack flows are persistent, not periodically refreshable!
 
 ## Description of the folds:
 + compare_attack_detection: results of comparing POA and FOA.
