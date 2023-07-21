@@ -1,5 +1,5 @@
 # POA
-Research on preemptive overflow attack (POA). The "preemptive" indicates that attack flows preempt the flow entries of normal application flows by exploiting the flow entry eviction mechanism. The difference between POA and high-rate overflow attack (HROA) as well as low-rate overflow attack (LROA) are described in the following table.
+Research on preemptive overflow attack (POA). The "preemptive" indicates that attack flows preempt the flow entries of normal application flows by exploiting the flow entry eviction mechanism. The differences between POA and high-rate overflow attack (HROA) as well as low-rate overflow attack (LROA) are described in the following table.
 | Method | Overflow rate | Flow features | Attack target |
 | :---:  |     :---:     |:---           | :---          |
 | HROA   | High          | slow, intermittent | Overload SDN controller | 
