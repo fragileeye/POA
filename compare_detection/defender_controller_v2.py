@@ -31,7 +31,6 @@ from defender_util import DefenderUtil
 import numpy as np
 import time
 
-
 class DefenderController(app_manager.RyuApp):
     OFP_VERSIONS = [ofproto_v1_3.OFP_VERSION]
 

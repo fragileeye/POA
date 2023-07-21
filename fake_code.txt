@@ -1,0 +1,22 @@
+function D3-F3(vtables, delta_limit, delta_mon, τ):
+	for each detection interval do
+		if in initial state then
+			datasets[switch] <- collect flow features of each switch from vtables
+			mark dataset[switch] as known dataset with label 1 
+		for ds in datasets do
+			ds_1, ds_0 <- get known data with label 1 and new data with label 0
+			S is vector of s, |ds_1| + |ds_0| = |S|
+			s = 1 for ds_1
+			s = 0 for ds_0
+			Train C(ds_1, ds_0, s)
+			if AUC(C, S) >= τ then
+				drift = True
+				mark ds_0 as unknown dataset with label -1
+			else:
+				drift = False
+				mark ds_0 as unknown dataset with label 1
+			if |ds| == delta_lim then
+				report anomaly switch and event 
+			unk_num <- get the number of unknown data labeled -1
+			if unk_num >= delta_mon then
+				report anomaly switch and event

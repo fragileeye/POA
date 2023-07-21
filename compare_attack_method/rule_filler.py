@@ -4,7 +4,7 @@ import random
 import sys
 
 class RuleFiller(object):
-    def __init__(self, iface, valid_hosts, max_flows=25, idle_time=3, pkts_ival=0.1):
+    def __init__(self, iface, valid_hosts, max_flows=1000, idle_time=3, pkts_ival=0.1):
         super(RuleFiller, self).__init__()
         self.iface = iface
         self.valid_hosts = valid_hosts
@@ -27,7 +27,7 @@ class RuleFiller(object):
     def start(self, times=10000):
         fab_pkts = self.gen_pkts()
         print('starting...')
-        for i in range(times):
+        for _ in range(times):
             cur_time = time.time()
             end_time = time.time() + self.idle_time
             # print('round: {0}'.format(i))

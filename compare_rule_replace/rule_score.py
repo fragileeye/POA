@@ -51,6 +51,10 @@ class DefenderController(app_manager.RyuApp):
         self.score_ival = 5
         # batch size for eliminating entries
         self.batch_size = 10
+
+        self.sigma = 10
+        self.gamma = 200
+
         # the following variance defined for the experiment
         # dict to record the normal and malicious request(suppose we known)
         self.flag = False 
@@ -537,7 +541,7 @@ class DefenderController(app_manager.RyuApp):
             self._dec_seg_ref(seg_p, 'pt')
             self._set_rec_time(seg_p, conn, time.time())
             self._set_rec_state(seg_p, conn, False)
-
+            # focus on dpid 1
             if self.evict_times[dpid] in range(100, 1020, 20):
                 with open('evict_score_{0}.txt'.format(dpid), 'a+') as fp:
                     fp.write('evict times: {0}, mal rules: {1}, norm rules: {2}\r\n'.format(\
@@ -558,8 +562,11 @@ class DefenderController(app_manager.RyuApp):
             stats = conn_rec['stats']
             rate = np.mean(stats['pkts'])
             simi = simi_cr[index[conn]]
-            conn_rec['score'] = 1 / (1 + np.exp(-rate)) * (1 - 1 / ( 1 + np.exp(-1000 * simi)))
-
+            # alternate score function
+            # conn_rec['score'] = 1 / (1 + np.exp(-rate)) * (1 - 1 / ( 1 + np.exp(-self.gamma * simi)))
+            rate_ratio = 1 / (1 + np.exp(-np.log(rate)/self.sigma))
+            simi_ratio = 1 - np.tanh(self.gamma * simi)
+            conn_rec['score'] = rate_ratio * simi_ratio
 
     def _process_data(self, records): 
         data = [] # just for reading 

@@ -27,6 +27,7 @@ from ryu.lib import hub
 from ryu.lib.packet import packet
 from ryu.lib.packet import ethernet, ipv4, udp, tcp
 from ryu.lib.packet import ether_types, in_proto
+import time
 
 class LFUControllerActive(app_manager.RyuApp):
     OFP_VERSIONS = [ofproto_v1_3.OFP_VERSION]
@@ -45,6 +46,7 @@ class LFUControllerActive(app_manager.RyuApp):
         # spawn a monitoring thread
         self.monitor_thread = hub.spawn(self._monitor)
 
+        
     def _init_controller(self, datapath):
         ofproto = datapath.ofproto
         parser = datapath.ofproto_parser
@@ -151,7 +153,9 @@ class LFUControllerActive(app_manager.RyuApp):
         seg['records'][conn] = {
             'alive': True,
             'stats': { 
-                'pkts': 0
+                'dura': 0,
+                'count': 0,
+                'rate': 0, # rate = count / dura
             }
         }
 
@@ -170,11 +174,13 @@ class LFUControllerActive(app_manager.RyuApp):
         if conn in seg['records']:
             conn_rec = seg['records'][conn]
             stat_rec = conn_rec['stats'] 
-            stat_rec['pkts'] = stats['pkts']
+            stat_rec['count'] += stats['count']
+            stat_rec['dura'] += stats['dura']
+            if not stat_rec['dura']:
+                stat_rec['rate'] = 0
+            else:
+                stat_rec['rate'] = stat_rec['count'] / stat_rec['dura'] 
     
-    # check the stable state, in practice we have no way to infer
-    # the state because the controller is always running, so when 
-    # the pps is half full, we record the state.
     def _manage_segment(self, datapath, conn):
         dpid = datapath.id
         vtable = self.vtables[dpid]
@@ -321,7 +327,7 @@ class LFUControllerActive(app_manager.RyuApp):
     def _switch_features_handler(self, ev):
         datapath = ev.msg.datapath
         self._init_controller(datapath)
-        self._init_vtable(datapath.id, 1000)
+        self._init_vtable(datapath.id, 200)
         self.dp_list.append(datapath)
 
     @set_ev_cls(ofp_event.EventOFPFlowRemoved, MAIN_DISPATCHER)
@@ -361,7 +367,7 @@ class LFUControllerActive(app_manager.RyuApp):
             if conn not in seg_p['records']: 
                 continue
             stats = self._query_stats(msg)
-            # update record stats, aka pkt rate
+            # update record stats
             self._set_rec_stats(seg_p, conn, stats)
 
     def _monitor(self):
@@ -375,13 +381,10 @@ class LFUControllerActive(app_manager.RyuApp):
 
     def _query_stats(self, msg):
         dura = msg.duration_sec + msg.duration_nsec/(10**9)
-        if not msg.packet_count or not dura:
-            pkts_mean = 0
-        else:
-            pkts_count = msg.packet_count
-            pkts_mean = pkts_count / dura
+        count = msg.packet_count
         return {
-            'pkts': pkts_mean,
+            'dura': dura,
+            'count': count,
         }
 
     def _schedule_table(self, datapath, seg):
@@ -392,9 +395,11 @@ class LFUControllerActive(app_manager.RyuApp):
         for conn, conn_rec in records.items():
             if self._is_rec_alive(seg, conn):
                 stats = conn_rec['stats']
-                alive_rec[conn] = stats['pkts']
+                # in case of TCP slow start that interrupts TCP session 
+                if stats['rate'] > 0: 
+                    alive_rec[conn] = stats['rate']
         sorted_rec = sorted(alive_rec.items(), key=lambda x: x[1])
-        for i in range(self.batch_size):
+        for i in range(min(self.batch_size, len(sorted_rec))):
             conn, pkt_rate = sorted_rec[i]
-            #print('conn: {0}, pkt_rate: {1}'.format(conn, pkt_rate))
+            print('conn: {0}, pkt_rate: {1}'.format(conn, pkt_rate))
             self._del_flow(datapath, conn)
