@@ -7,7 +7,7 @@ Research on preemptive overflow attack (POA). The "preemptive" indicates that at
 | POA    | Arbitrary     | Fast, persistent   | Preempt flow entries of normal applications |
 
 ## Description of the folds:
-+ compare_attack_detection: results of comparing POA and FOA.
++ compare_attack_detection: results of comparing POA and HROA as well as LROA.
 + compare_seg_mgmt: codes and results of table segmentation exp.
 + compare_rule_replace: codes and results of flow eviction exp, and the pcap files used to conduct the exp.
 + compare_detection: codes and results of attack detection exp.
