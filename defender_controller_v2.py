@@ -586,7 +586,10 @@ class DefenderController(app_manager.RyuApp):
             stats = conn_rec['stats']
             rate = np.mean(stats['pkts'])
             simi = simi_cr[index[conn]]
-            conn_rec['score'] = 1 / (1 + np.exp(-rate)) * (1 - 1 / ( 1 + np.exp(-1000 * simi)))
+            # conn_rec['score'] = 1 / (1 + np.exp(-rate)) * (1 - 1 / ( 1 + np.exp(-1000 * simi)))
+            rate_ratio = 1 / (1 + np.exp(-np.log(rate)/self.sigma))
+            simi_ratio = 1 - np.tanh(self.gamma * simi)
+            conn_rec['score'] = rate_ratio * simi_ratio
 
     def _query_classes(self, seg, conn):
         records = seg['records']
