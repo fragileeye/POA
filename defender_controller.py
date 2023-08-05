@@ -56,6 +56,9 @@ class DefenderController(app_manager.RyuApp):
         # thresholds
         self.delta_lim=1.2
         self.delta_mon=0.5
+        
+        self.sigma = 10
+        self.gamma = 200
 
     def _init_controller(self, datapath):
         ofproto = datapath.ofproto
