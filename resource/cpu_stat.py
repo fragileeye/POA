@@ -27,7 +27,7 @@ def main(stat_dir):
                 np.mean(stat_result), np.median(stat_result)))
 
 if __name__ == '__main__':
-    main('txt/cpu')
+    main('txt/cpu_s')
                                    
                 
                 

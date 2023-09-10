@@ -4,12 +4,12 @@ import random
 import sys
 
 class GenerateFlows(object):
-    def __init__(self, iface, target):
+    def __init__(self, iface, target, flows):
         super(GenerateFlows, self).__init__()
         self.iface = iface
         self.target = target
         # max flow entries during attacks 
-        self.max_flows = 200
+        self.max_flows = flows
         self.idle_time = 3
         self.pkts_ival = 1
     
@@ -36,12 +36,14 @@ class GenerateFlows(object):
                 cur_time += self.pkts_ival
 
 if __name__ == '__main__':
-    target = '192.168.1.2'
+    target = '192.168.10.2'
     try:
         for idx, param in enumerate(sys.argv):
             if param == '-e':
                 iface = sys.argv[idx+1]
-        filler = GenerateFlows(iface, target)
+            elif param == '-f':
+                flows = int(sys.argv[idx+1])
+        filler = GenerateFlows(iface, target, flows)
         filler.start()
     except KeyboardInterrupt:
         print('test done...')

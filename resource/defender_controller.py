@@ -42,7 +42,7 @@ class DefenderController(app_manager.RyuApp):
         # virtual table to manage flow tables 
         self.vtables = dict()
         # utils to schedule flow table or detect attacks
-        self.handler = DefenderUtil(0.7)
+        self.handler = DefenderUtil()
         # global default idle time or init hard time 
         self.init_t0 = 3
         # max time for short flow entries
@@ -56,6 +56,9 @@ class DefenderController(app_manager.RyuApp):
         # thresholds
         self.delta_lim=1.2
         self.delta_mon=0.5
+        self.sigma = 10
+        self.gamma = 200
+
 
     def _init_controller(self, datapath):
         ofproto = datapath.ofproto
@@ -158,7 +161,7 @@ class DefenderController(app_manager.RyuApp):
         type = seg['vt_type']
         idx = '%s_idx' %flag
         seg[idx] += 1
-        # print('[+] dpid {0}, seg {1}, type {2}, size: {3}'.format(dpid, type, flag, seg[idx])) 
+        print('[+] dpid {0}, seg {1}, type {2}, size: {3}'.format(dpid, type, flag, seg[idx])) 
 
     def _dec_seg_ref(self, seg, flag):
         dpid = seg['dpid']
@@ -166,7 +169,7 @@ class DefenderController(app_manager.RyuApp):
         idx = '%s_idx' %flag
         if seg[idx] > 0:
             seg[idx] -= 1
-        # print('[-] dpid {0}, seg {1}, type {2}, size: {3}'.format(dpid, type, flag, seg[idx])) 
+        print('[-] dpid {0}, seg {1}, type {2}, size: {3}'.format(dpid, type, flag, seg[idx])) 
 
     def _is_seg_init(self, seg, flag):
         if not seg['init_state']:
@@ -316,6 +319,15 @@ class DefenderController(app_manager.RyuApp):
                 self._set_rec_state(seg_p, conn, True)
                 self._set_rec_time(seg_p, conn, time.time())
                 res = True
+            # do attack detection
+            if not self._is_seg_free(seg_p, 'vt'):
+                # print('Time: {0}, dpid: {1} Event: VPS is overflow'\
+                #     .format(time.time(), dpid))
+                pass 
+            elif self._is_seg_mal(seg_p):
+                # print('Time: {0}, dpid: {1} Event: new entries flood'\
+                #    .format(time.time(), dpid))
+                pass
             return res
 
     def _clean_segment(self, dpid):
@@ -328,13 +340,13 @@ class DefenderController(app_manager.RyuApp):
         # remove dead entries in seg_t
         for conn in list(rec_t.keys()):
             if self._is_rec_dead(seg_t, conn):
-                # print('[idle remove] dpid: {0}, conn: {1}'.format(dpid, conn))
+                print('[idle remove] dpid: {0}, conn: {1}'.format(dpid, conn))
                 rec_t.pop(conn)
                 self._dec_seg_ref(seg_t, 'vt')
         # remove dead entries in seg_p
         for conn in list(rec_p.keys()):
             if self._is_rec_dead(seg_p, conn):
-                # print('[idle remove] dpid: {0}, conn: {1}'.format(dpid, conn))
+                print('[idle remove] dpid: {0}, conn: {1}'.format(dpid, conn))
                 rec_p.pop(conn)
                 self._dec_seg_ref(seg_p, 'vt')
 
@@ -521,7 +533,7 @@ class DefenderController(app_manager.RyuApp):
         stats = self._query_stats(msg)
         if msg.reason == ofproto.OFPRR_HARD_TIMEOUT:
             if conn not in rec_t: # unexpected
-                # print('[HARD: {0}] unexpect conn: {1}'.format(dpid, conn))
+                print('[HARD: {0}] unexpect conn: {1}'.format(dpid, conn))
                 return
             self._dec_seg_ref(seg_t, 'pt')
             self._set_rec_time(seg_t, conn, time.time())
@@ -531,14 +543,14 @@ class DefenderController(app_manager.RyuApp):
             # OFPRR_IDLE_TIMEOUT: happens when idle flow isn't alive
             # OFPRR_DELETE: happens when pps is full, schedule_table 
             if conn not in rec_p: # unexpected
-                # print('[IDLE: {0}] unexpect conn: {1}'.format(dpid, conn))
+                print('[IDLE: {0}] unexpect conn: {1}'.format(dpid, conn))
                 return
             #don't deref virtual table here, see clean_segment.
             self._dec_seg_ref(seg_p, 'pt')
             self._set_rec_time(seg_p, conn, time.time())
             self._set_rec_state(seg_p, conn, False)
         elif msg.reason == ofproto.OFPRR_DELETE:
-            # print('[DELETE: {0}] conn: {1}'.format(dpid, conn))
+            print('[DELETE: {0}] conn: {1}'.format(dpid, conn))
             self._dec_seg_ref(seg_p, 'pt')
             self._set_rec_time(seg_p, conn, time.time())
             self._set_rec_state(seg_p, conn, False)
@@ -546,17 +558,20 @@ class DefenderController(app_manager.RyuApp):
 
     def _query_scores(self, seg, conn):
         records = seg['records']
-        dataset = self._process_data(records)
-        simi_cr = self._calc_sim_cr(dataset)
+        dataset = self.handler.process_data(records)
+        simi_cr = self.handler.calc_sim_cr(dataset)
         index = dataset['idx'] 
         for conn, conn_rec in records.items():
             stats = conn_rec['stats']
             rate = np.mean(stats['pkts'])
             simi = simi_cr[index[conn]]
-            conn_rec['score'] = 1 / (1 + np.exp(-rate)) * (1 - 1 / ( 1 + np.exp(-1000 * simi)))
+            # conn_rec['score'] = 1 / (1 + np.exp(-rate)) * (1 - 1 / ( 1 + np.exp(-1000 * simi)))
+            rate_ratio = 1 / (1 + np.exp(-np.log(rate)/self.sigma))
+            simi_ratio = 1 - np.tanh(self.gamma * simi)
+            conn_rec['score'] = rate_ratio * simi_ratio
 
     def _schedule_table(self, datapath, seg):
-        # print('schedule table...')
+        print('schedule table...')
         # get scores of active entries
         records = seg['records']
         score_rec = dict()
@@ -595,7 +610,7 @@ class DefenderController(app_manager.RyuApp):
             elif conn_rec['class'] == 0:
                 new_rec[conn] = conn_rec
         if len(new_rec) >= self.batch_size:
-            # print('[+] data processing: {0} items'.format(len(new_rec)))
+            print('[+] data processing: {0} items'.format(len(new_rec)))
             old_ds = self.handler.process_data(old_rec)
             new_ds = self.handler.process_data(new_rec)
             result = self.handler.check_drift(seg['dpid'], old_ds, new_ds)

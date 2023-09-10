@@ -17,7 +17,7 @@ class Mem_Mon():
     
     def run(self):
         try:
-            path = self.params.get('path', 'cpu.txt')
+            path = self.params.get('path', 'mem.txt')
             ival = self.params.get('ival', 3)
             with open(path, 'w+') as fp:
                 while not self.is_stop:

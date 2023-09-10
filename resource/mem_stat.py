@@ -16,7 +16,7 @@ def main(stat_dir):
                 lines = fp.readlines()
                 last_line = lines[-1]
                 mem_percent = last_line.split(':')[-1]
-            print('{} {:.3f}'.format(num_switch, float(mem_percent)))
+            print('{} {:.4f}'.format(num_switch, float(mem_percent)))
             
 if __name__ == '__main__':
-    main('txt/mem')
+    main('txt/mem_s')
