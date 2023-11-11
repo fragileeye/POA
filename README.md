@@ -17,6 +17,6 @@ Research on preemptive overflow attack (POA). The "preemptive" indicates that at
 
 ## Notice:
 + The pcap files used for the experiments are excluded due to large file size. However, they are available for request.
-+ The majority of experiments described in the paper require online testing, making it difficult to detail every step. If you wish to reproduce the experiments, please contact us and we will be happy to assist you.
++ The majority of experiments described in the paper require online testing, making it difficult to detail every step. If you wish to reproduce the experiments, please detail DOI: 10.1109/ACCESS.2023.3330224 or contact us.
 
 
